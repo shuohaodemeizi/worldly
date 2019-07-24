@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Console\Boot;
+use App\Models\Music;
 use Facades\ {
     App\Services\Netease
 };
@@ -52,11 +53,14 @@ class MusicPlayList extends Boot
         $userPlaylists = $this->getUserCreatePlayLists($result, $userId); // 处理歌单列表
         Log::info($userPlaylists);
         $this->insertUserPlayLists($userPlaylists, $userId); // 插入到数据库
+        //歌词并入库
+        $this->insertLyric($userId); // 插入到数据库
+
         $this->crawerUserMusic($userId); // 爬取用户歌单中的所有歌曲并入库
         // 多进程爬取评论入库
-        Artisan::queue('netease:comment', [
-            'user_id' => $userId, '--mutix' => '--mutix',
-        ]);
+        //Artisan::queue('netease:comment', [
+        //    'user_id' => $userId, '--mutix' => '--mutix',
+        //]);
         $this->end();
     }
 
@@ -125,5 +129,26 @@ class MusicPlayList extends Boot
             return $list;
         })->values()->all();
         UserMusic::addOrUpdate($userId, $music);
+    }
+
+    /**
+     * 遍历我收藏的歌曲，获取歌词后插入数据库
+     */
+    private function insertLyric($userId)
+    {
+        $list = UserMusic::where('user_id',$userId)->get();
+        foreach ($list as $k => $v) {
+
+            if (!Music::where('id', $v->music_id)->exists() && $v->music_id) {
+                $tmp = array();
+                $tmp['id'] = $v->music_id;
+                $tmp['name'] = $v->music_name;
+                $tmp['singer'] = $v->singer;
+                $lyric = Netease::lyric($v->music_id);
+                $arr_lyric = json_decode($lyric,true);
+                $tmp['lyric'] = isset($arr_lyric['lrc']['lyric'])?$arr_lyric['lrc']['lyric']:'';
+                Music::insert($tmp);
+            }
+        }
     }
 }

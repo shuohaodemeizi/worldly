@@ -134,6 +134,16 @@ class Netease
         return $this->curl->retryCurl($url, $this->prepare($data));
     }
 
+    /*
+    * https://music.163.com/weapi/song/lyric?csrf_token=41a966014be77cfbd64d1bb9c92d796a
+    *  http://music.163.com/api/song/lyric?os=pc&id=1294924781&lv=-1&kv=-1&tv=-1
+    */
+    public function lyric($song_id)
+    {
+        $url = 'http://music.163.com/api/song/lyric?os=pc&id='.$song_id.'&lv=-1&kv=-1&tv=-1';
+        return $this->curl->retryCurl($url);
+    }
+
 
     /**
      * 歌单API
